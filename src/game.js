@@ -50,6 +50,7 @@ function randMsg(obs){ return obs.msgs[Math.floor(Math.random()*obs.msgs.length)
 let STATE='start'; // start | playing | dying | dead
 let dodel,obstacles,coins,parts,score,best=0,frame,spd,raf=null;
 let spawnTimer=0,coinTimer=0,hitMsg='',jumpCount=0;
+let shieldCoins=0,shieldActive=false,shieldTimer=0;
 let pressStart=0,pressing=false;
 
 try{ best=parseInt(localStorage.getItem('dd_best')||'0'); }catch(e){}
@@ -686,31 +687,6 @@ function loop(){
   drawDudel(ctx,dodel.x,dodel.y,dodel.f,false,spd,dodel.squish);
   drawObs();
 
-  // shield HUD
-  const sdots=document.getElementById('jind');
-  // coin counter
-  ctx.save();
-  ctx.fillStyle=shieldActive?'rgba(56,196,240,0.25)':'rgba(0,0,0,0.12)';
-  ctx.beginPath();ctx.roundRect(10,H-52,90,34,17);ctx.fill();
-  ctx.font='13px sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';
-  ctx.fillStyle=shieldActive?'#38C4F0':'rgba(0,0,0,0.5)';
-  // draw 5 mini dots
-  for(let i=0;i<5;i++){
-    ctx.fillStyle=i<shieldCoins?'#38C4F0':'rgba(0,0,0,0.2)';
-    ctx.beginPath();ctx.arc(22+i*15,H-35,5,0,Math.PI*2);ctx.fill();
-  }
-  ctx.fillStyle=shieldActive?'#38C4F0':'rgba(0,0,0,0.4)';
-  ctx.font='10px sans-serif';ctx.textAlign='center';
-  ctx.fillText(shieldActive?'🛡️ AKTIV':'🛡️ '+shieldCoins+'/5',55,H-52+34+10);
-  // shield glow on dudel when active
-  if(shieldActive){
-    ctx.fillStyle='rgba(56,196,240,0.12)';
-    ctx.beginPath();ctx.ellipse(dodel.x+20,dodel.y+40,34,44,0,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle=`rgba(56,196,240,${0.4+Math.sin(frame*.15)*.3})`;
-    ctx.lineWidth=3;
-    ctx.beginPath();ctx.ellipse(dodel.x+20,dodel.y+40,34,44,0,0,Math.PI*2);ctx.stroke();
-  }
-  ctx.restore();
   // Shield HUD (bottom left)
   ctx.save();
   ctx.fillStyle=shieldActive?'rgba(56,196,240,0.22)':'rgba(0,0,0,0.1)';
