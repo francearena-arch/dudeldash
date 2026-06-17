@@ -1,0 +1,15 @@
+{
+  "name": "dudel-dash",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dudel Dash – Überlebe den Büroalltag. Ein viraler Endless Runner.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}
