@@ -14,22 +14,22 @@
 <meta property="og:description" content="Überlebe den Büroalltag! Wie lange schaffst du es?" />
 <meta property="og:type" content="website" />
 
-<link rel="manifest" href="/manifest.json" />
-<link rel="apple-touch-icon" href="/icons/icon-192.png" />
-<link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="apple-touch-icon" href="./icons/icon-192.png" />
+<link rel="icon" type="image/png" href="./icons/icon-192.png" />
 
 <title>Dudel Dash — Überlebe den Büroalltag</title>
-<link rel="stylesheet" href="/src/style.css" />
+<link rel="stylesheet" href="./src/style.css" />
 </head>
 <body>
   <div id="wrap">
-    <canvas id="gc" width="480" height="520"></canvas>
+    <canvas id="gc"></canvas>
     <div id="ui">
       <div id="sc">0</div>
       <div id="bc">Best: 0</div>
       <div id="jind"><div class="jdot" id="j0"></div><div class="jdot" id="j1"></div></div>
       <div class="screen" id="startS">
-        <canvas id="preview" width="56" height="80" style="background:transparent"></canvas>
+        <canvas id="preview" width="64" height="92" style="background:transparent"></canvas>
         <div class="stitle">DUDEL DASH</div>
         <div class="ssub">Überlebe den Büroalltag</div>
         <div class="tips">
@@ -39,17 +39,17 @@
         <div class="hint" style="margin-top:8px">Tippen zum Starten</div>
       </div>
       <div class="screen" id="deathS" style="display:none;">
-        <div class="dlabel">Überlebt</div>
+        <div class="d-line1">Du hast</div>
         <div class="dscore" id="fs">0</div>
-        <div class="dlabel" style="margin-top:-4px">Sekunden im Büroalltag</div>
+        <div class="d-line2">Sekunden im Büroalltag überlebt</div>
         <div class="dmsg" id="dm"></div>
         <button class="sbtn" id="shareBtn">Ergebnis teilen 📤</button>
-        <div class="hint" style="margin-top:2px">Tippen für nochmal</div>
+        <div class="hint" style="margin-top:6px">Tippen für nochmal</div>
       </div>
     </div>
   </div>
   <button id="openBtn" onclick="window.open(window.location.href,'_blank')">🔗 Im Browser öffnen</button>
 
-  <script type="module" src="/src/game.js"></script>
+  <script type="module" src="./src/game.js"></script>
 </body>
 </html>
