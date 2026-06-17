@@ -8,6 +8,87 @@
 })();
 
 // ═══════════════════════════════════════════════
+// SOUND SYSTEM — synthesized via Web Audio API
+// (no audio files needed, everything procedural)
+// ═══════════════════════════════════════════════
+const SFX = (function(){
+  let actx = null;
+  let muted = false;
+  try{ muted = localStorage.getItem('dd_muted')==='1'; }catch(e){}
+
+  function ctxReady(){
+    if(!actx){
+      try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }
+      catch(e){ return null; }
+    }
+    if(actx.state==='suspended') actx.resume();
+    return actx;
+  }
+
+  // Unlock audio context on first user interaction (required by browsers)
+  function unlock(){
+    const c = ctxReady();
+    if(c && c.state==='suspended') c.resume();
+  }
+  document.addEventListener('touchend', unlock, {once:true, passive:true});
+  document.addEventListener('click', unlock, {once:true});
+
+  function tone(freq, dur, type, vol, glideTo){
+    if(muted) return;
+    const c = ctxReady();
+    if(!c) return;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, c.currentTime);
+    if(glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, c.currentTime + dur);
+    gain.gain.setValueAtTime(vol||0.15, c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+    osc.connect(gain); gain.connect(c.destination);
+    osc.start(c.currentTime);
+    osc.stop(c.currentTime + dur);
+  }
+
+  function noiseBurst(dur, vol){
+    if(muted) return;
+    const c = ctxReady();
+    if(!c) return;
+    const bufferSize = c.sampleRate * dur;
+    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+    const noise = c.createBufferSource();
+    noise.buffer = buffer;
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(vol||0.2, c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+    const filter = c.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 1800;
+    noise.connect(filter); filter.connect(gain); gain.connect(c.destination);
+    noise.start();
+  }
+
+  return {
+    jump(){ tone(420, 0.13, 'triangle', 0.16, 620); },
+    doubleJump(){ tone(520, 0.14, 'triangle', 0.17, 760); },
+    land(){ tone(160, 0.07, 'sine', 0.10, 90); },
+    hit(){
+      // comic "bonk" — low thud + noise crack
+      tone(110, 0.22, 'sawtooth', 0.22, 55);
+      noiseBurst(0.18, 0.18);
+    },
+    score(){ tone(880, 0.07, 'sine', 0.05, 880); },
+    tap(){ tone(300, 0.05, 'sine', 0.06); },
+    toggleMute(){
+      muted = !muted;
+      try{ localStorage.setItem('dd_muted', muted?'1':'0'); }catch(e){}
+      return muted;
+    },
+    isMuted(){ return muted; }
+  };
+})();
+
+// ═══════════════════════════════════════════════
 // CANVAS & RESPONSIVE SETUP
 // ═══════════════════════════════════════════════
 const gc=document.getElementById('gc');
@@ -157,6 +238,18 @@ function randMsg(obs){ return obs.msgs[Math.floor(Math.random()*obs.msgs.length)
 let STATE='start'; // start | playing | dying | dead
 let dodel,obstacles,parts,score,best=0,frame,spd,raf=null;
 let spawnTimer=0,hitMsg='',jumpCount=0;
+let shakeAmount=0;
+
+function applyShake(){
+  if(shakeAmount>0.5){
+    const sx=(Math.random()-0.5)*shakeAmount;
+    const sy=(Math.random()-0.5)*shakeAmount;
+    ctx.translate(sx,sy);
+    shakeAmount*=0.82; // decay
+  } else {
+    shakeAmount=0;
+  }
+}
 
 try{ best=parseInt(localStorage.getItem('dd_best')||'0'); }catch(e){}
 
@@ -1125,11 +1218,13 @@ function addBurst(x,y){
 // ═══════════════════════════════════════════════
 function doJump(){
   if(dodel.jumpsLeft<=0) return;
+  const isDouble = dodel.jumpsLeft<2;
   const power = dodel.jumpsLeft===2 ? JUMP_POWER : JUMP_POWER*.82;
   dodel.vy=power;
   dodel.jumpsLeft--;
   dodel.onGround=false;
   dodel.squish=1.3; dodel.squishV=-.06;
+  if(isDouble) SFX.doubleJump(); else SFX.jump();
   for(let i=0;i<8;i++) parts.push({
     x:dodel.x+20, y:dodel.y+dodel.h,
     vx:(Math.random()-.5)*5, vy:-Math.random()*3-1,
@@ -1155,6 +1250,14 @@ document.addEventListener('touchend', handleTap, {passive:false});
 document.addEventListener('click', handleTap);
 document.addEventListener('keydown',e=>{
   if(e.code==='Space'&&!e.repeat){ e.preventDefault(); handleTap(e); }
+});
+
+document.getElementById('muteBtn').addEventListener('click',e=>{
+  e.stopPropagation();
+  e.preventDefault();
+  lastTap=Date.now();
+  const isMuted = SFX.toggleMute();
+  e.currentTarget.textContent = isMuted ? '🔇' : '🔊';
 });
 
 document.getElementById('shareBtn').addEventListener('click',e=>{
@@ -1189,27 +1292,51 @@ function die(msg){
   if(STATE==='dying'||STATE==='dead')return;
   STATE='dying';
   stopAll();
+  SFX.hit();
   hitMsg=msg||'Montag hat gesiegt. Wieder mal. 😮‍💨';
   best=Math.max(best,score);
   try{localStorage.setItem('dd_best',best);}catch(e){}
   addBurst(dodel.x+20,dodel.y+40);
-  let t=0;
-  function da(){
-    t++;
-    parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.38;p.life-=.035;});
-    parts=parts.filter(p=>p.life>0);
+  shakeAmount = 14; // trigger screen shake
+
+  // Hit-pause: freeze on the death pose for a few frames before particles fly
+  let pause=0;
+  const PAUSE_FRAMES=7;
+  function freeze(){
+    pause++;
+    ctx.save();
+    applyShake();
     ctx.clearRect(-9999,-9999,99999,99999);drawBg();drawObs();drawParts();
     drawDudel(ctx,dodel.x,dodel.y,dodel.f,true,spd,1);
-    if(t<45){deathRaf=requestAnimationFrame(da);}
-    else{
-      STATE='dead';
-      document.getElementById('fs').textContent=score;
-      document.getElementById('dm').textContent=hitMsg;
-      document.getElementById('bc').textContent=`Best: ${best}`;
-      document.getElementById('deathS').style.display='flex';
-    }
+    ctx.restore();
+    if(pause<PAUSE_FRAMES){ deathRaf=requestAnimationFrame(freeze); }
+    else { runDeathAnim(); }
   }
-  deathRaf=requestAnimationFrame(da);
+
+  function runDeathAnim(){
+    let t=0;
+    function da(){
+      t++;
+      parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.38;p.life-=.035;});
+      parts=parts.filter(p=>p.life>0);
+      ctx.save();
+      applyShake();
+      ctx.clearRect(-9999,-9999,99999,99999);drawBg();drawObs();drawParts();
+      drawDudel(ctx,dodel.x,dodel.y,dodel.f,true,spd,1);
+      ctx.restore();
+      if(t<45){deathRaf=requestAnimationFrame(da);}
+      else{
+        STATE='dead';
+        document.getElementById('fs').textContent=score;
+        document.getElementById('dm').textContent=hitMsg;
+        document.getElementById('bc').textContent=`Best: ${best}`;
+        document.getElementById('deathS').style.display='flex';
+      }
+    }
+    deathRaf=requestAnimationFrame(da);
+  }
+
+  deathRaf=requestAnimationFrame(freeze);
 }
 
 function startGame(){
@@ -1232,7 +1359,7 @@ function loop(){
   dodel.y+=dodel.vy;
   if(dodel.y>=GY-dodel.h){
     dodel.y=GY-dodel.h;
-    if(!dodel.onGround){dodel.squish=1.25;dodel.squishV=-.05;}
+    if(!dodel.onGround){dodel.squish=1.25;dodel.squishV=-.05;SFX.land();}
     dodel.vy=0;dodel.onGround=true;dodel.jumpsLeft=2;
   } else { dodel.onGround=false; }
 
@@ -1254,16 +1381,19 @@ function loop(){
   parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life-=.04;});
   parts=parts.filter(p=>p.life>0);
 
-  if(frame%60===0) score++;
+  if(frame%60===0){ score++; SFX.score(); }
 
   for(const o of obstacles){
     if(hits(dodel,{x:o.x,y:o.y,w:o.w,h:o.h})){die(o.msg);return;}
   }
 
   ctx.clearRect(-9999,-9999,99999,99999);
+  ctx.save();
+  applyShake();
   drawBg();drawParts();
   drawDudel(ctx,dodel.x,dodel.y,dodel.f,false,spd,dodel.squish);
   drawObs();
+  ctx.restore();
 
   document.getElementById('sc').textContent=score;
   let b=best;try{b=Math.max(parseInt(localStorage.getItem('dd_best')||'0'),score);}catch(e){}
@@ -1276,6 +1406,7 @@ function loop(){
 // BOOT
 // ═══════════════════════════════════════════════
 resize();
+document.getElementById('muteBtn').textContent = SFX.isMuted() ? '🔇' : '🔊';
 document.getElementById('bc').textContent=`Best: ${best}`;
 resetAll();
 ctx.clearRect(-9999,-9999,99999,99999);drawBg();
