@@ -1367,43 +1367,46 @@ function generateDeathCard(finalScore, msg, isHighscore){
     cc.beginPath();cc.arc(x,y,1.4,0,Math.PI*2);cc.fill();
   }
 
-  const glow = cc.createRadialGradient(CW/2,CH*0.40,10,CW/2,CH*0.40,220);
+  const glow = cc.createRadialGradient(CW/2,CH*0.34,10,CW/2,CH*0.34,240);
   glow.addColorStop(0,'rgba(168,158,245,0.35)');
   glow.addColorStop(1,'rgba(168,158,245,0)');
   cc.fillStyle=glow; cc.fillRect(0,0,CW,CH);
 
-  cc.fillStyle='rgba(255,255,255,0.5)';
-  cc.font='600 22px system-ui, sans-serif';
-  cc.textAlign='center';
-  cc.fillText('DUDEL DASH', CW/2, 80);
-
+  // Dudel — compact, near the top
   cc.save();
-  cc.translate(CW/2 - 60, CH*0.13);
-  cc.scale(2.2, 2.2);
+  cc.translate(CW/2 - 48, 56);
+  cc.scale(1.8, 1.8);
   drawDudel(cc, 0, 0, 0, true, 0, 1);
   cc.restore();
 
+  // Title — bigger, pushed further down, the clear brand anchor
+  cc.fillStyle='#FFFFFF';
+  cc.font='800 40px system-ui, sans-serif';
+  cc.textAlign='center';
+  cc.letterSpacing = '2px';
+  cc.fillText('DUDEL DASH', CW/2, 270);
+  cc.letterSpacing = '0px';
+
   cc.fillStyle='rgba(255,255,255,0.55)';
   cc.font='500 26px system-ui, sans-serif';
-  cc.textAlign='center';
-  cc.fillText('Du hast', CW/2, CH*0.38);
+  cc.fillText('Du hast', CW/2, CH*0.40);
 
   cc.fillStyle='#FFFFFF';
   cc.font='800 130px system-ui, sans-serif';
-  cc.fillText(finalScore, CW/2, CH*0.38 + 120);
+  cc.fillText(finalScore, CW/2, CH*0.40 + 122);
 
   cc.fillStyle='rgba(255,255,255,0.45)';
   cc.font='500 22px system-ui, sans-serif';
-  cc.fillText('Sekunden im Büroalltag überlebt', CW/2, CH*0.38 + 160);
+  cc.fillText('Sekunden im Büroalltag überlebt', CW/2, CH*0.40 + 162);
 
   if(isHighscore){
     cc.fillStyle='rgba(239,159,39,0.15)';
-    cc.beginPath();cc.roundRect(CW/2-110, CH*0.38+185, 220, 42, 21);cc.fill();
+    cc.beginPath();cc.roundRect(CW/2-110, CH*0.40+187, 220, 42, 21);cc.fill();
     cc.strokeStyle='rgba(239,159,39,0.5)';cc.lineWidth=1.5;
-    cc.beginPath();cc.roundRect(CW/2-110, CH*0.38+185, 220, 42, 21);cc.stroke();
+    cc.beginPath();cc.roundRect(CW/2-110, CH*0.40+187, 220, 42, 21);cc.stroke();
     cc.fillStyle='#EF9F27';
     cc.font='700 16px system-ui, sans-serif';
-    cc.fillText('🏆 NEUER HIGHSCORE', CW/2, CH*0.38+212);
+    cc.fillText('🏆 NEUER HIGHSCORE', CW/2, CH*0.40+214);
   }
 
   cc.fillStyle='#C4BCF8';
@@ -1412,7 +1415,7 @@ function generateDeathCard(finalScore, msg, isHighscore){
   const maxTextWidth = CW-120;
   const lines = wrapText(cc, msg, maxTextWidth);
   const lineHeight=30;
-  const boxY = CH*0.38 + (isHighscore?245:195);
+  const boxY = CH*0.40 + (isHighscore?247:197);
   const boxW = CW-80;
   const boxH = Math.max(110, lines.length*lineHeight + 50);
 
@@ -1431,7 +1434,7 @@ function generateDeathCard(finalScore, msg, isHighscore){
 
   cc.fillStyle='rgba(255,255,255,0.3)';
   cc.font='500 18px system-ui, sans-serif';
-  cc.fillText('🏃 Spiel jetzt selbst — Dudel Dash', CW/2, CH-50);
+  cc.fillText('🏃 Spiel jetzt selbst — Dudel Dash', CW/2, CH-56);
 
   return cardCanvas;
 }
@@ -1515,6 +1518,7 @@ function die(msg){
 
 function startGame(){
   stopAll();
+  if(window.__dudelFloatBg) window.__dudelFloatBg.stop();
   document.getElementById('deathS').style.display='none';
   document.getElementById('startS').style.display='none';
   document.getElementById('highscoreS').style.display='none';
@@ -1526,6 +1530,7 @@ function startGame(){
 function showHighscores(){
   let b=0;try{b=parseInt(localStorage.getItem('dd_best')||'0');}catch(e){}
   document.getElementById('hsLocalBest').textContent=b;
+  if(window.__dudelFloatBg) window.__dudelFloatBg.stop();
   document.getElementById('startS').style.display='none';
   document.getElementById('highscoreS').style.display='flex';
 }
@@ -1535,6 +1540,7 @@ function showStartScreen(){
   document.getElementById('deathS').style.display='none';
   document.getElementById('startS').style.display='flex';
   STATE='start';
+  if(window.__dudelFloatBg) window.__dudelFloatBg.start();
 }
 
 document.getElementById('playBtn').addEventListener('click',e=>{
@@ -1609,6 +1615,90 @@ function loop(){
 }
 
 // ═══════════════════════════════════════════════
+// START SCREEN — floating office objects background
+// Subtle, slow-drifting emoji icons for branding/atmosphere
+// ═══════════════════════════════════════════════
+(function(){
+  const fc = document.getElementById('floatCanvas');
+  if(!fc) return;
+  const fctx = fc.getContext('2d');
+  const ICONS = ['☕','📁','📎','📧','📊','🖇️','📌','🗂️','📝','☎️'];
+  let floatObjs = [];
+  let floatRaf = null;
+  let floatRunning = false;
+
+  function sizeFloatCanvas(){
+    const dpr = window.devicePixelRatio || 1;
+    const w = fc.clientWidth, h = fc.clientHeight;
+    fc.width = Math.round(w*dpr);
+    fc.height = Math.round(h*dpr);
+    fctx.setTransform(dpr,0,0,dpr,0,0);
+    return {w,h};
+  }
+
+  function initFloatObjs(){
+    const {w,h} = sizeFloatCanvas();
+    floatObjs = [];
+    const count = 9;
+    for(let i=0;i<count;i++){
+      floatObjs.push({
+        icon: ICONS[Math.floor(Math.random()*ICONS.length)],
+        x: Math.random()*w,
+        y: Math.random()*h,
+        size: 22 + Math.random()*20,
+        speedY: -(0.12 + Math.random()*0.22),
+        drift: (Math.random()-0.5)*0.4,
+        sway: Math.random()*Math.PI*2,
+        swaySpeed: 0.004 + Math.random()*0.006,
+        opacity: 0.10 + Math.random()*0.14,
+        rot: (Math.random()-0.5)*0.3,
+      });
+    }
+  }
+
+  function floatLoop(){
+    if(!floatRunning) return;
+    const w = fc.clientWidth, h = fc.clientHeight;
+    fctx.clearRect(0,0,w,h);
+    floatObjs.forEach(o=>{
+      o.y += o.speedY;
+      o.sway += o.swaySpeed;
+      o.x += o.drift + Math.sin(o.sway)*0.15;
+      if(o.y < -40){ o.y = h+40; o.x = Math.random()*w; }
+      if(o.x < -40) o.x = w+40;
+      if(o.x > w+40) o.x = -40;
+      fctx.save();
+      fctx.globalAlpha = o.opacity;
+      fctx.translate(o.x, o.y);
+      fctx.rotate(o.rot + Math.sin(o.sway)*0.08);
+      fctx.font = `${o.size}px sans-serif`;
+      fctx.textAlign='center';
+      fctx.textBaseline='middle';
+      fctx.fillText(o.icon, 0, 0);
+      fctx.restore();
+    });
+    floatRaf = requestAnimationFrame(floatLoop);
+  }
+
+  function startFloat(){
+    if(floatRunning) return;
+    floatRunning = true;
+    initFloatObjs();
+    floatLoop();
+  }
+  function stopFloat(){
+    floatRunning = false;
+    if(floatRaf) cancelAnimationFrame(floatRaf);
+  }
+
+  window.addEventListener('resize', ()=>{ if(floatRunning) initFloatObjs(); });
+
+  // Expose minimal controls so the rest of the game can show/hide this
+  // background only while the start screen is actually visible.
+  window.__dudelFloatBg = { start: startFloat, stop: stopFloat };
+})();
+
+// ═══════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════
 resize();
@@ -1627,3 +1717,5 @@ pc.scale(1.5,1.5);
 drawDudel(pc,0,0,0,false,0,1);
 pc.restore();
 GY = savedGY;
+
+if(window.__dudelFloatBg) window.__dudelFloatBg.start();

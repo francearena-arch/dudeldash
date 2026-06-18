@@ -97,6 +97,19 @@ canvas#gc{
   background:radial-gradient(ellipse at 50% 30%, #2E2878 0%, #1A1640 55%, #110D2C 100%);
   backdrop-filter:none;
   cursor:default;
+  overflow:hidden;
+}
+#floatCanvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:0;
+  pointer-events:none;
+}
+.startScreen > *:not(#floatCanvas){
+  position:relative;
+  z-index:1;
 }
 
 .stitle{
