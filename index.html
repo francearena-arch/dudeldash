@@ -29,23 +29,42 @@
       <div id="bc">Best: 0</div>
       <button id="muteBtn" aria-label="Stumm schalten">🔊</button>
       <div id="jind"><div class="jdot" id="j0"></div><div class="jdot" id="j1"></div></div>
-      <div class="screen" id="startS">
-        <canvas id="preview" width="64" height="92" style="background:transparent"></canvas>
+      <div class="screen startScreen" id="startS">
+        <canvas id="preview" width="100" height="140" style="background:transparent"></canvas>
         <div class="stitle">DUDEL DASH</div>
         <div class="ssub">Überlebe den Büroalltag</div>
+        <div class="cta-col">
+          <button class="cta-btn cta-primary" id="playBtn">▶ Spiel starten</button>
+          <button class="cta-btn cta-secondary" id="highscoreBtn">🏆 Highscores</button>
+        </div>
         <div class="tips">
           <div class="tip"><span>Tippen</span>Springen</div>
           <div class="tip"><span>2× Tippen</span>Doppelsprung</div>
         </div>
-        <div class="hint" style="margin-top:8px">Tippen zum Starten</div>
+      </div>
+      <div class="screen" id="highscoreS" style="display:none;">
+        <div class="stitle" style="font-size:clamp(24px,7vw,32px)">🏆 HIGHSCORES</div>
+        <div class="hs-best">
+          <div class="hs-label">Deine Bestleistung</div>
+          <div class="hs-value" id="hsLocalBest">0</div>
+          <div class="hs-sub">Sekunden im Büroalltag</div>
+        </div>
+        <div class="hs-placeholder">
+          🌐 Online-Bestenliste folgt bald —<br>aktuell wird nur lokal gespeichert.
+        </div>
+        <button class="cta-btn cta-secondary" id="hsBackBtn">← Zurück</button>
       </div>
       <div class="screen" id="deathS" style="display:none;">
         <div class="d-line1">Du hast</div>
         <div class="dscore" id="fs">0</div>
         <div class="d-line2">Sekunden im Büroalltag überlebt</div>
         <div class="dmsg" id="dm"></div>
-        <button class="sbtn" id="shareBtn">Ergebnis teilen 📤</button>
-        <div class="hint" style="margin-top:6px">Tippen für nochmal</div>
+        <img id="deathCardImg" alt="" style="display:none;width:120px;border-radius:10px;margin-top:6px;box-shadow:0 8px 24px rgba(0,0,0,0.4);" />
+        <div class="death-actions">
+          <button class="sbtn" id="shareBtn">Teilen 📤</button>
+          <button class="sbtn sbtn-secondary" id="downloadBtn">Bild speichern 💾</button>
+        </div>
+        <button class="cta-btn cta-primary" id="restartBtn" style="margin-top:14px">▶ Nochmal spielen</button>
       </div>
     </div>
   </div>

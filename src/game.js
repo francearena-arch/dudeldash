@@ -1237,13 +1237,18 @@ function doJump(){
 let lastTap=0;
 
 function handleTap(e){
+  // Ignore taps that originate on buttons or other interactive UI controls
+  // (mute button, CTAs, share button, etc.) — those have their own handlers.
+  if(e && e.target && e.target.closest && e.target.closest('button')) return;
+  // Only jumping happens via the generic tap; starting/restarting is
+  // handled exclusively by explicit CTA buttons (see below).
+  if(STATE!=='playing') return;
+
   if(e&&e.cancelable) e.preventDefault();
   const now=Date.now();
   if(now-lastTap<80) return;
   lastTap=now;
-  if(STATE==='playing') doJump();
-  else if(STATE==='start') startGame();
-  else if(STATE==='dead') startGame();
+  doJump();
 }
 
 document.addEventListener('touchend', handleTap, {passive:false});
@@ -1260,15 +1265,47 @@ document.getElementById('muteBtn').addEventListener('click',e=>{
   e.currentTarget.textContent = isMuted ? '🔇' : '🔊';
 });
 
-document.getElementById('shareBtn').addEventListener('click',e=>{
+document.getElementById('downloadBtn').addEventListener('click',e=>{
+  e.stopPropagation();
+  e.preventDefault();
+  lastTap=Date.now();
+  if(!lastDeathCardBlob){ return; }
+  const url = URL.createObjectURL(lastDeathCardBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dudeldash.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+});
+
+document.getElementById('shareBtn').addEventListener('click',async e=>{
   e.stopPropagation();
   e.preventDefault();
   lastTap=Date.now();
   const s=document.getElementById('fs').textContent;
   const msg=(document.getElementById('dm').textContent||'').replace(/\n/g,' ');
   const text=`${s}s Büroalltag überlebt!\n"${msg}"\n🏃 #DudelDash`;
-  if(navigator.share)navigator.share({text}).catch(()=>{});
-  else{try{navigator.clipboard.writeText(text);}catch(e){}alert('Kopiert!\n\n'+text);}
+
+  // Prefer sharing the generated image (Web Share API Level 2 with files)
+  if(lastDeathCardBlob && navigator.canShare && navigator.canShare({files:[new File([lastDeathCardBlob],'dudeldash.png',{type:'image/png'})]})){
+    try{
+      const file = new File([lastDeathCardBlob], 'dudeldash.png', {type:'image/png'});
+      await navigator.share({files:[file], text});
+      return;
+    }catch(err){ /* user cancelled or failed, fall through */ }
+  }
+  // Fallback: text-only share
+  if(navigator.share){
+    try{ await navigator.share({text}); return; }catch(err){}
+  }
+  // Last resort: copy text + offer image download
+  try{navigator.clipboard.writeText(text);}catch(e){}
+  if(lastDeathCardBlob){
+    const url = URL.createObjectURL(lastDeathCardBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'dudeldash.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+  alert('Text kopiert! Bild wird zusätzlich heruntergeladen.');
 });
 
 // ═══════════════════════════════════════════════
@@ -1282,6 +1319,108 @@ function hits(a,b){
 // ═══════════════════════════════════════════════
 // DEATH & RESTART
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// SHAREABLE DEATH CARD — rendered to an offscreen canvas
+// Story-format (540x960, 9:16) for easy sharing/download
+// ═══════════════════════════════════════════════
+function generateDeathCard(finalScore, msg, isHighscore){
+  const CW=540, CH=960;
+  const cardCanvas = document.createElement('canvas');
+  cardCanvas.width = CW; cardCanvas.height = CH;
+  const cc = cardCanvas.getContext('2d');
+
+  const bg = cc.createLinearGradient(0,0,0,CH);
+  bg.addColorStop(0,'#1A1640');
+  bg.addColorStop(0.5,'#241F52');
+  bg.addColorStop(1,'#15112E');
+  cc.fillStyle=bg; cc.fillRect(0,0,CW,CH);
+
+  cc.fillStyle='rgba(255,255,255,0.04)';
+  for(let x=20;x<CW;x+=36) for(let y=20;y<CH;y+=36){
+    cc.beginPath();cc.arc(x,y,1.4,0,Math.PI*2);cc.fill();
+  }
+
+  const glow = cc.createRadialGradient(CW/2,CH*0.40,10,CW/2,CH*0.40,220);
+  glow.addColorStop(0,'rgba(168,158,245,0.35)');
+  glow.addColorStop(1,'rgba(168,158,245,0)');
+  cc.fillStyle=glow; cc.fillRect(0,0,CW,CH);
+
+  cc.fillStyle='rgba(255,255,255,0.5)';
+  cc.font='600 22px system-ui, sans-serif';
+  cc.textAlign='center';
+  cc.fillText('DUDEL DASH', CW/2, 80);
+
+  cc.save();
+  cc.translate(CW/2 - 60, CH*0.13);
+  cc.scale(2.2, 2.2);
+  drawDudel(cc, 0, 0, 0, true, 0, 1);
+  cc.restore();
+
+  cc.fillStyle='rgba(255,255,255,0.55)';
+  cc.font='500 26px system-ui, sans-serif';
+  cc.textAlign='center';
+  cc.fillText('Du hast', CW/2, CH*0.38);
+
+  cc.fillStyle='#FFFFFF';
+  cc.font='800 130px system-ui, sans-serif';
+  cc.fillText(finalScore, CW/2, CH*0.38 + 120);
+
+  cc.fillStyle='rgba(255,255,255,0.45)';
+  cc.font='500 22px system-ui, sans-serif';
+  cc.fillText('Sekunden im Büroalltag überlebt', CW/2, CH*0.38 + 160);
+
+  if(isHighscore){
+    cc.fillStyle='rgba(239,159,39,0.15)';
+    cc.beginPath();cc.roundRect(CW/2-110, CH*0.38+185, 220, 42, 21);cc.fill();
+    cc.strokeStyle='rgba(239,159,39,0.5)';cc.lineWidth=1.5;
+    cc.beginPath();cc.roundRect(CW/2-110, CH*0.38+185, 220, 42, 21);cc.stroke();
+    cc.fillStyle='#EF9F27';
+    cc.font='700 16px system-ui, sans-serif';
+    cc.fillText('🏆 NEUER HIGHSCORE', CW/2, CH*0.38+212);
+  }
+
+  const boxY = CH*0.38 + (isHighscore?245:195);
+  const boxW = CW-80, boxH=150;
+  cc.fillStyle='rgba(168,158,245,0.12)';
+  cc.beginPath();cc.roundRect(40, boxY, boxW, boxH, 16);cc.fill();
+  cc.strokeStyle='rgba(168,158,245,0.2)';cc.lineWidth=1.5;
+  cc.beginPath();cc.roundRect(40, boxY, boxW, boxH, 16);cc.stroke();
+
+  cc.fillStyle='#C4BCF8';
+  cc.font='500 22px system-ui, sans-serif';
+  cc.textAlign='center';
+  const lines = msg.split('\n');
+  const lineHeight=30;
+  const startY = boxY + boxH/2 - (lines.length-1)*lineHeight/2 + 8;
+  lines.forEach((line,i)=>{
+    cc.fillText(line, CW/2, startY + i*lineHeight, boxW-40);
+  });
+
+  cc.fillStyle='rgba(255,255,255,0.3)';
+  cc.font='500 18px system-ui, sans-serif';
+  cc.fillText('🏃 Spiel jetzt selbst — Dudel Dash', CW/2, CH-50);
+
+  return cardCanvas;
+}
+
+let lastDeathCardBlob = null;
+
+async function buildAndShowDeathCard(finalScore, msg, isHighscore){
+  try{
+    const cardCanvas = generateDeathCard(finalScore, msg, isHighscore);
+    const blob = await new Promise(res => cardCanvas.toBlob(res, 'image/png'));
+    lastDeathCardBlob = blob;
+    const url = URL.createObjectURL(blob);
+    const imgEl = document.getElementById('deathCardImg');
+    if(imgEl){
+      imgEl.src = url;
+      imgEl.style.display='block';
+    }
+  }catch(e){
+    console.warn('Death card generation failed', e);
+  }
+}
+
 let deathRaf=null;
 function stopAll(){
   if(raf){cancelAnimationFrame(raf);raf=null;}
@@ -1327,10 +1466,12 @@ function die(msg){
       if(t<45){deathRaf=requestAnimationFrame(da);}
       else{
         STATE='dead';
+        const isHS = score>=best && score>0;
         document.getElementById('fs').textContent=score;
         document.getElementById('dm').textContent=hitMsg;
         document.getElementById('bc').textContent=`Best: ${best}`;
         document.getElementById('deathS').style.display='flex';
+        buildAndShowDeathCard(score, hitMsg, isHS);
       }
     }
     deathRaf=requestAnimationFrame(da);
@@ -1343,10 +1484,42 @@ function startGame(){
   stopAll();
   document.getElementById('deathS').style.display='none';
   document.getElementById('startS').style.display='none';
+  document.getElementById('highscoreS').style.display='none';
   resetAll();
   STATE='playing';
   loop();
 }
+
+function showHighscores(){
+  let b=0;try{b=parseInt(localStorage.getItem('dd_best')||'0');}catch(e){}
+  document.getElementById('hsLocalBest').textContent=b;
+  document.getElementById('startS').style.display='none';
+  document.getElementById('highscoreS').style.display='flex';
+}
+
+function showStartScreen(){
+  document.getElementById('highscoreS').style.display='none';
+  document.getElementById('deathS').style.display='none';
+  document.getElementById('startS').style.display='flex';
+  STATE='start';
+}
+
+document.getElementById('playBtn').addEventListener('click',e=>{
+  e.stopPropagation(); e.preventDefault(); lastTap=Date.now();
+  startGame();
+});
+document.getElementById('highscoreBtn').addEventListener('click',e=>{
+  e.stopPropagation(); e.preventDefault(); lastTap=Date.now();
+  showHighscores();
+});
+document.getElementById('hsBackBtn').addEventListener('click',e=>{
+  e.stopPropagation(); e.preventDefault(); lastTap=Date.now();
+  showStartScreen();
+});
+document.getElementById('restartBtn').addEventListener('click',e=>{
+  e.stopPropagation(); e.preventDefault(); lastTap=Date.now();
+  startGame();
+});
 
 // ═══════════════════════════════════════════════
 // MAIN LOOP
@@ -1412,11 +1585,12 @@ resetAll();
 ctx.clearRect(-9999,-9999,99999,99999);drawBg();
 
 const pc=document.getElementById('preview').getContext('2d');
-pc.clearRect(0,0,64,92);
+pc.clearRect(0,0,100,140);
 const savedGY = GY;
-GY = 80; // local shadow reference for the small preview canvas
+GY = 120; // local shadow reference for the small preview canvas
 pc.save();
-pc.translate(2,2);
+pc.translate(10,18);
+pc.scale(1.5,1.5);
 drawDudel(pc,0,0,0,false,0,1);
 pc.restore();
 GY = savedGY;
