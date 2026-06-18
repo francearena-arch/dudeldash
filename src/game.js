@@ -1053,6 +1053,8 @@ function initBg(){
     {type:'window',x:GAME_W*0.12,y:0,w:90,h:110,spd:.08},
     {type:'window',x:GAME_W*0.58,y:0,w:90,h:110,spd:.08},
     {type:'clock',x:GAME_W*0.90,y:0,spd:.08},
+    {type:'lamp',x:GAME_W*0.28,y:0,spd:.10},
+    {type:'lamp',x:GAME_W*0.78,y:0,spd:.10},
   ];
 }
 initBg();
@@ -1076,13 +1078,33 @@ function drawBg(){
     o.x-=o.spd*(spd||4)/4;
     if(o.x+200<0) o.x=GAME_W+60+Math.random()*120;
 
-    const oy = o.type==='window' ? GY*0.10 :
+    const oy = o.type==='window' ? GY*0.24 :
                o.type==='clock'  ? GY*0.07 :
                o.type==='cabinet'? GY-130 :
                o.type==='desk'   ? GY-95 :
-               o.type==='plant'  ? GY-80 : 0;
+               o.type==='plant'  ? GY-80 :
+               o.type==='lamp'   ? 0 : 0;
 
-    if(o.type==='window'){
+    if(o.type==='lamp'){
+      // hanging ceiling lamp: cord + shade + warm glow, purely decorative
+      ctx.strokeStyle='#8A8470';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(o.x,16);ctx.lineTo(o.x,GY*0.155);ctx.stroke();
+      // glow
+      const lg=ctx.createRadialGradient(o.x,GY*0.175,4,o.x,GY*0.175,60);
+      lg.addColorStop(0,'rgba(255,245,200,0.30)');lg.addColorStop(1,'rgba(255,245,200,0)');
+      ctx.fillStyle=lg;ctx.beginPath();ctx.arc(o.x,GY*0.175,60,0,Math.PI*2);ctx.fill();
+      // shade
+      ctx.fillStyle='#E8C158';
+      ctx.beginPath();
+      ctx.moveTo(o.x-16,GY*0.175);
+      ctx.lineTo(o.x+16,GY*0.175);
+      ctx.lineTo(o.x+9,GY*0.155);
+      ctx.lineTo(o.x-9,GY*0.155);
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle='#FFF6D8';
+      ctx.beginPath();ctx.ellipse(o.x,GY*0.178,13,4,0,0,Math.PI*2);ctx.fill();
+
+    } else if(o.type==='window'){
       ctx.fillStyle='#9A9588';ctx.beginPath();ctx.roundRect(o.x-4,oy-4,o.w+8,o.h+8,4);ctx.fill();
       const skyG=ctx.createLinearGradient(o.x,oy,o.x,oy+o.h);
       skyG.addColorStop(0,'#87CEEB');skyG.addColorStop(1,'#C8E8F8');
@@ -1191,15 +1213,6 @@ function drawObs(){
     ctx.translate(o.x, o.y+o.wobble);
     drawObstacleSprite(ctx, {x:0,y:0,w:o.w,h:o.h,objType:o.objType});
     ctx.restore();
-
-    // danger glow when close to dudel
-    const dist=o.x-(GAME_W*0.18+42);
-    if(dist<110&&dist>0){
-      const alpha=0.55*(1-dist/110);
-      ctx.strokeStyle=`rgba(220,50,50,${alpha})`;
-      ctx.lineWidth=3;
-      ctx.beginPath();ctx.roundRect(o.x-4,o.y+o.wobble-4,o.w+8,o.h+8,10);ctx.stroke();
-    }
   });
 }
 
@@ -1351,10 +1364,11 @@ function wrapText(ctx, text, maxWidth){
 }
 
 function generateDeathCard(finalScore, msg, isHighscore){
-  const CW=540, CH=960;
-  const cardCanvas = document.createElement('canvas');
-  cardCanvas.width = CW; cardCanvas.height = CH;
-  const cc = cardCanvas.getContext('2d');
+  // ── INNER CARD: the actual game-branded content ──
+  const CW=540, CH=900;
+  const inner = document.createElement('canvas');
+  inner.width = CW; inner.height = CH;
+  const cc = inner.getContext('2d');
 
   const bg = cc.createLinearGradient(0,0,0,CH);
   bg.addColorStop(0,'#1A1640');
@@ -1367,46 +1381,50 @@ function generateDeathCard(finalScore, msg, isHighscore){
     cc.beginPath();cc.arc(x,y,1.4,0,Math.PI*2);cc.fill();
   }
 
-  const glow = cc.createRadialGradient(CW/2,CH*0.34,10,CW/2,CH*0.34,240);
-  glow.addColorStop(0,'rgba(168,158,245,0.35)');
+  const glow = cc.createRadialGradient(CW/2,CH*0.32,10,CW/2,CH*0.32,260);
+  glow.addColorStop(0,'rgba(168,158,245,0.38)');
   glow.addColorStop(1,'rgba(168,158,245,0)');
   cc.fillStyle=glow; cc.fillRect(0,0,CW,CH);
 
-  // Dudel — compact, near the top
+  // Dudel — bigger and closer to the title, the catchy focal point
   cc.save();
-  cc.translate(CW/2 - 48, 56);
-  cc.scale(1.8, 1.8);
+  cc.translate(CW/2 - 62, 36);
+  cc.scale(2.3, 2.3);
   drawDudel(cc, 0, 0, 0, true, 0, 1);
   cc.restore();
 
-  // Title — bigger, pushed further down, the clear brand anchor
+  // Title — large brand anchor, tightened distance to Dudel
   cc.fillStyle='#FFFFFF';
-  cc.font='800 40px system-ui, sans-serif';
+  cc.font='800 44px system-ui, sans-serif';
   cc.textAlign='center';
   cc.letterSpacing = '2px';
-  cc.fillText('DUDEL DASH', CW/2, 270);
+  cc.fillText('DUDEL DASH', CW/2, 232);
   cc.letterSpacing = '0px';
 
   cc.fillStyle='rgba(255,255,255,0.55)';
   cc.font='500 26px system-ui, sans-serif';
-  cc.fillText('Du hast', CW/2, CH*0.40);
+  cc.fillText('Du hast', CW/2, 304);
 
   cc.fillStyle='#FFFFFF';
   cc.font='800 130px system-ui, sans-serif';
-  cc.fillText(finalScore, CW/2, CH*0.40 + 122);
+  cc.fillText(finalScore, CW/2, 426);
 
   cc.fillStyle='rgba(255,255,255,0.45)';
   cc.font='500 22px system-ui, sans-serif';
-  cc.fillText('Sekunden im Büroalltag überlebt', CW/2, CH*0.40 + 162);
+  cc.fillText('Sekunden im Büroalltag überlebt', CW/2, 466);
 
+  let afterTopY = 491;
   if(isHighscore){
     cc.fillStyle='rgba(239,159,39,0.15)';
-    cc.beginPath();cc.roundRect(CW/2-110, CH*0.40+187, 220, 42, 21);cc.fill();
+    cc.beginPath();cc.roundRect(CW/2-110, afterTopY, 220, 42, 21);cc.fill();
     cc.strokeStyle='rgba(239,159,39,0.5)';cc.lineWidth=1.5;
-    cc.beginPath();cc.roundRect(CW/2-110, CH*0.40+187, 220, 42, 21);cc.stroke();
+    cc.beginPath();cc.roundRect(CW/2-110, afterTopY, 220, 42, 21);cc.stroke();
     cc.fillStyle='#EF9F27';
     cc.font='700 16px system-ui, sans-serif';
-    cc.fillText('🏆 NEUER HIGHSCORE', CW/2, CH*0.40+214);
+    cc.fillText('🏆 NEUER HIGHSCORE', CW/2, afterTopY+27);
+    afterTopY += 62;
+  } else {
+    afterTopY += 12;
   }
 
   cc.fillStyle='#C4BCF8';
@@ -1415,7 +1433,7 @@ function generateDeathCard(finalScore, msg, isHighscore){
   const maxTextWidth = CW-120;
   const lines = wrapText(cc, msg, maxTextWidth);
   const lineHeight=30;
-  const boxY = CH*0.40 + (isHighscore?247:197);
+  const boxY = afterTopY;
   const boxW = CW-80;
   const boxH = Math.max(110, lines.length*lineHeight + 50);
 
@@ -1434,9 +1452,36 @@ function generateDeathCard(finalScore, msg, isHighscore){
 
   cc.fillStyle='rgba(255,255,255,0.3)';
   cc.font='500 18px system-ui, sans-serif';
-  cc.fillText('🏃 Spiel jetzt selbst — Dudel Dash', CW/2, CH-56);
+  cc.fillText('🏃 Spiel jetzt selbst — Dudel Dash', CW/2, CH-34);
 
-  return cardCanvas;
+  // ── OUTER POLAROID FRAME: baked into the final exported image ──
+  // so the shared/downloaded PNG looks identical to the in-app preview.
+  const PAD_SIDE=28, PAD_TOP=28, PAD_BOTTOM=92;
+  const OW = CW + PAD_SIDE*2;
+  const OH = CH + PAD_TOP + PAD_BOTTOM;
+  const outer = document.createElement('canvas');
+  outer.width = OW; outer.height = OH;
+  const oc = outer.getContext('2d');
+
+  oc.fillStyle = '#FAFAF7';
+  oc.beginPath();
+  oc.roundRect(0,0,OW,OH,6);
+  oc.fill();
+
+  // subtle paper texture dots
+  oc.fillStyle='rgba(0,0,0,0.02)';
+  for(let x=6;x<OW;x+=14) for(let y=6;y<OH;y+=14){
+    oc.beginPath();oc.arc(x,y,0.6,0,Math.PI*2);oc.fill();
+  }
+
+  oc.drawImage(inner, PAD_SIDE, PAD_TOP);
+
+  oc.fillStyle = '#3A3550';
+  oc.font = "600 30px 'Brush Script MT', cursive, system-ui";
+  oc.textAlign='center';
+  oc.fillText('#DudelDash', OW/2, OH - PAD_BOTTOM/2 + 10);
+
+  return outer;
 }
 
 let lastDeathCardBlob = null;
