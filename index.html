@@ -37,6 +37,7 @@
         <div class="cta-col">
           <button class="cta-btn cta-primary" id="playBtn">▶ Spiel starten</button>
           <button class="cta-btn cta-secondary" id="highscoreBtn">🏆 Highscores</button>
+          <button class="cta-btn cta-secondary" id="settingsBtn">⚙️ Bürgermenü</button>
         </div>
         <div class="tips">
           <div class="tip"><span>Tippen</span>Springen</div>
@@ -54,6 +55,48 @@
           🌐 Online-Bestenliste folgt bald —<br>aktuell wird nur lokal gespeichert.
         </div>
         <button class="cta-btn cta-secondary" id="hsBackBtn">← Zurück</button>
+      </div>
+      <div class="screen settingsScreen" id="settingsS" style="display:none;">
+        <div class="stitle" style="font-size:clamp(22px,6vw,28px)">⚙️ BÜRGERMENÜ</div>
+        <div class="settings-list">
+          <div class="settings-section-label">SOUND</div>
+          <button class="settings-row" id="settingsMuteBtn">
+            <span class="sr-icon">🔊</span>
+            <span class="sr-label">Sound</span>
+            <span class="sr-value" id="settingsMuteLabel">An</span>
+          </button>
+
+          <div class="settings-section-label" style="margin-top:18px">FORTSCHRITT</div>
+          <button class="settings-row settings-row-danger" id="settingsResetBtn">
+            <span class="sr-icon">🗑️</span>
+            <span class="sr-label">Bestleistung zurücksetzen</span>
+          </button>
+
+          <div class="settings-section-label" style="margin-top:18px">PERSONALISIERUNG</div>
+          <div class="settings-row settings-row-locked">
+            <span class="sr-icon">👔</span>
+            <span class="sr-label">Dudel-Outfits</span>
+            <span class="sr-badge">Bald</span>
+          </div>
+          <div class="settings-row settings-row-locked">
+            <span class="sr-icon">🏢</span>
+            <span class="sr-label">Büro-Themes</span>
+            <span class="sr-badge">Bald</span>
+          </div>
+
+          <div class="settings-section-label" style="margin-top:18px">SPIELINFO</div>
+          <div class="settings-row settings-row-info">
+            <span class="sr-icon">🎮</span>
+            <span class="sr-label">Steuerung</span>
+            <span class="sr-value">Tippen / 2× Tippen</span>
+          </div>
+          <div class="settings-row settings-row-info">
+            <span class="sr-icon">📱</span>
+            <span class="sr-label">Version</span>
+            <span class="sr-value">v1.0</span>
+          </div>
+        </div>
+        <button class="cta-btn cta-secondary" id="settingsBackBtn" style="margin-top:auto">← Zurück</button>
       </div>
       <div class="screen deathScreen" id="deathS" style="display:none;">
         <span id="fs" style="display:none;">0</span>
