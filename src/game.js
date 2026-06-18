@@ -1265,47 +1265,48 @@ document.getElementById('muteBtn').addEventListener('click',e=>{
   e.currentTarget.textContent = isMuted ? '🔇' : '🔊';
 });
 
-document.getElementById('downloadBtn').addEventListener('click',e=>{
-  e.stopPropagation();
-  e.preventDefault();
-  lastTap=Date.now();
-  if(!lastDeathCardBlob){ return; }
-  const url = URL.createObjectURL(lastDeathCardBlob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'dudeldash.png';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url), 2000);
-});
-
 document.getElementById('shareBtn').addEventListener('click',async e=>{
   e.stopPropagation();
   e.preventDefault();
   lastTap=Date.now();
   const s=document.getElementById('fs').textContent;
   const msg=(document.getElementById('dm').textContent||'').replace(/\n/g,' ');
-  const text=`${s}s Büroalltag überlebt!\n"${msg}"\n🏃 #DudelDash`;
 
-  // Prefer sharing the generated image (Web Share API Level 2 with files)
-  if(lastDeathCardBlob && navigator.canShare && navigator.canShare({files:[new File([lastDeathCardBlob],'dudeldash.png',{type:'image/png'})]})){
+  // Catchy, varied CTA hooks so shares don't all read identically
+  const hooks=[
+    `Nur ${s} Sekunden im Büroalltag überlebt 💀 Schaffst du mehr?`,
+    `${s}s im Office-Wahnsinn überlebt. Mehr Glück als ich? 😅`,
+    `Der Büroalltag hat mich nach ${s}s erledigt. Dein Versuch?`,
+    `${s} Sekunden Corporate Survival. Knackst du meinen Score?`,
+  ];
+  const hook = hooks[Math.floor(Math.random()*hooks.length)];
+  const text = `${hook}\n"${msg}"\n\n🏃 Jetzt selbst spielen → Dudel Dash\n#DudelDash`;
+
+  const brandedName = `dudeldash-${s}s.png`;
+
+  if(lastDeathCardBlob && navigator.canShare && navigator.canShare({files:[new File([lastDeathCardBlob],brandedName,{type:'image/png'})]})){
     try{
-      const file = new File([lastDeathCardBlob], 'dudeldash.png', {type:'image/png'});
+      const file = new File([lastDeathCardBlob], brandedName, {type:'image/png'});
       await navigator.share({files:[file], text});
       return;
     }catch(err){ /* user cancelled or failed, fall through */ }
   }
-  // Fallback: text-only share
   if(navigator.share){
     try{ await navigator.share({text}); return; }catch(err){}
   }
-  // Last resort: copy text + offer image download
   try{navigator.clipboard.writeText(text);}catch(e){}
   if(lastDeathCardBlob){
     const url = URL.createObjectURL(lastDeathCardBlob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'dudeldash.png';
+    a.href = url; a.download = brandedName;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
   alert('Text kopiert! Bild wird zusätzlich heruntergeladen.');
+});
+
+document.getElementById('menuBtn').addEventListener('click',e=>{
+  e.stopPropagation(); e.preventDefault(); lastTap=Date.now();
+  showStartScreen();
 });
 
 // ═══════════════════════════════════════════════
@@ -1412,9 +1413,10 @@ async function buildAndShowDeathCard(finalScore, msg, isHighscore){
     lastDeathCardBlob = blob;
     const url = URL.createObjectURL(blob);
     const imgEl = document.getElementById('deathCardImg');
-    if(imgEl){
+    const wrapEl = document.getElementById('polaroidWrap');
+    if(imgEl && wrapEl){
       imgEl.src = url;
-      imgEl.style.display='block';
+      wrapEl.style.display='flex';
     }
   }catch(e){
     console.warn('Death card generation failed', e);
