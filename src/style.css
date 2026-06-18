@@ -161,49 +161,18 @@ canvas#gc{
   margin:6px 0 4px;
 }
 
-/* Death screen layout — full-height responsive distribution */
+/* Death screen layout — card is the single source of truth, full-height distribution */
 .deathScreen{
-  justify-content:space-between;
+  justify-content:center;
   padding-top:max(20px,env(safe-area-inset-top));
   padding-bottom:max(20px,env(safe-area-inset-bottom));
-  gap:8px;
-}
-.death-top{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:10px;
-  flex-shrink:0;
-}
-.d-line1{
-  font-size:clamp(19px,5vw,23px);
-  color:rgba(255,255,255,.85);
-  font-weight:600;
-}
-.dscore-inline{
-  color:#fff;
-  font-weight:800;
-  font-size:1.15em;
-}
-.d-line2{
-  font-size:14px;
-  color:rgba(255,255,255,.45);
-  letter-spacing:.5px;
-  margin-top:-8px;
-}
-.dmsg{
-  font-size:14.5px;color:#C4BCF8;font-weight:500;
-  max-width:320px;text-align:center;line-height:1.5;
-  padding:12px 16px;background:rgba(168,158,245,.12);
-  border-radius:12px;border:1px solid rgba(168,158,245,.18);
-  white-space:pre-line;
-  margin-top:4px;
+  gap:28px;
 }
 
-/* Polaroid-style frame around the generated death card */
+/* Polaroid-style frame around the generated death card — now the main focal element */
 .polaroid{
   background:#FAFAF7;
-  padding:14px 14px 38px 14px;
+  padding:16px 16px 42px 16px;
   border-radius:4px;
   box-shadow:0 14px 34px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.3);
   transform:rotate(-1.2deg);
@@ -212,48 +181,29 @@ canvas#gc{
   display:flex;
   flex-direction:column;
   align-items:center;
-  max-width:min(78vw, 230px);
+  width:min(86vw, 320px);
   position:relative;
 }
 .polaroid img{
   display:block;
   width:100%;
   height:auto;
-  max-height:min(38vh, 320px);
+  max-height:min(56vh, 480px);
   object-fit:cover;
   border-radius:2px;
 }
 .polaroid-caption{
   position:absolute;
-  bottom:8px;
+  bottom:9px;
   left:0;right:0;
   text-align:center;
   font-family:'Brush Script MT', cursive, system-ui;
-  font-size:17px;
+  font-size:19px;
   color:#3A3550;
   font-weight:600;
   letter-spacing:.5px;
 }
 
-.sbtn{
-  pointer-events:all;
-  padding:11px 26px;
-  border-radius:10px;
-  border:1px solid rgba(168,158,245,.4);
-  background:rgba(168,158,245,.12);
-  color:#C4BCF8;
-  font-size:14px;font-weight:600;
-  cursor:pointer;
-  transition:all .15s;
-}
-.sbtn:hover{background:rgba(168,158,245,.25);border-color:rgba(168,158,245,.7);}
-.death-actions{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:center;
-  flex-shrink:0;
-}
 .death-bottom-nav{
   display:flex;
   flex-direction:column;

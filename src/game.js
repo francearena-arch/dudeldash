@@ -1270,9 +1270,10 @@ document.getElementById('shareBtn').addEventListener('click',async e=>{
   e.preventDefault();
   lastTap=Date.now();
   const s=document.getElementById('fs').textContent;
-  const msg=(document.getElementById('dm').textContent||'').replace(/\n/g,' ');
 
-  // Catchy, varied CTA hooks so shares don't all read identically
+  // Catchy, varied CTA hooks so shares don't all read identically.
+  // The punchline/Spruch is NOT repeated here — it's already visible
+  // on the shared image itself, so the text stays short and punchy.
   const hooks=[
     `Nur ${s} Sekunden im Büroalltag überlebt 💀 Schaffst du mehr?`,
     `${s}s im Office-Wahnsinn überlebt. Mehr Glück als ich? 😅`,
@@ -1280,7 +1281,7 @@ document.getElementById('shareBtn').addEventListener('click',async e=>{
     `${s} Sekunden Corporate Survival. Knackst du meinen Score?`,
   ];
   const hook = hooks[Math.floor(Math.random()*hooks.length)];
-  const text = `${hook}\n"${msg}"\n\n🏃 Jetzt selbst spielen → Dudel Dash\n#DudelDash`;
+  const text = `${hook}\n\n🏃 Jetzt selbst spielen → Dudel Dash\n#DudelDash`;
 
   const brandedName = `dudeldash-${s}s.png`;
 
@@ -1324,6 +1325,31 @@ function hits(a,b){
 // SHAREABLE DEATH CARD — rendered to an offscreen canvas
 // Story-format (540x960, 9:16) for easy sharing/download
 // ═══════════════════════════════════════════════
+// Wraps text to fit maxWidth by measuring actual rendered width,
+// splitting on word boundaries — avoids Canvas's fillText() squashing
+// text horizontally when given a maxWidth it doesn't fit in.
+function wrapText(ctx, text, maxWidth){
+  // Normalize: treat any existing \n as a forced break, but still
+  // word-wrap each resulting segment independently.
+  const paragraphs = text.split('\n');
+  const allLines = [];
+  paragraphs.forEach(para=>{
+    const words = para.split(' ');
+    let current = '';
+    words.forEach(word=>{
+      const test = current ? current + ' ' + word : word;
+      if(ctx.measureText(test).width > maxWidth && current){
+        allLines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    });
+    if(current) allLines.push(current);
+  });
+  return allLines;
+}
+
 function generateDeathCard(finalScore, msg, isHighscore){
   const CW=540, CH=960;
   const cardCanvas = document.createElement('canvas');
@@ -1380,8 +1406,16 @@ function generateDeathCard(finalScore, msg, isHighscore){
     cc.fillText('🏆 NEUER HIGHSCORE', CW/2, CH*0.38+212);
   }
 
+  cc.fillStyle='#C4BCF8';
+  cc.font='500 22px system-ui, sans-serif';
+  cc.textAlign='center';
+  const maxTextWidth = CW-120;
+  const lines = wrapText(cc, msg, maxTextWidth);
+  const lineHeight=30;
   const boxY = CH*0.38 + (isHighscore?245:195);
-  const boxW = CW-80, boxH=150;
+  const boxW = CW-80;
+  const boxH = Math.max(110, lines.length*lineHeight + 50);
+
   cc.fillStyle='rgba(168,158,245,0.12)';
   cc.beginPath();cc.roundRect(40, boxY, boxW, boxH, 16);cc.fill();
   cc.strokeStyle='rgba(168,158,245,0.2)';cc.lineWidth=1.5;
@@ -1390,11 +1424,9 @@ function generateDeathCard(finalScore, msg, isHighscore){
   cc.fillStyle='#C4BCF8';
   cc.font='500 22px system-ui, sans-serif';
   cc.textAlign='center';
-  const lines = msg.split('\n');
-  const lineHeight=30;
   const startY = boxY + boxH/2 - (lines.length-1)*lineHeight/2 + 8;
   lines.forEach((line,i)=>{
-    cc.fillText(line, CW/2, startY + i*lineHeight, boxW-40);
+    cc.fillText(line, CW/2, startY + i*lineHeight);
   });
 
   cc.fillStyle='rgba(255,255,255,0.3)';
@@ -1470,7 +1502,6 @@ function die(msg){
         STATE='dead';
         const isHS = score>=best && score>0;
         document.getElementById('fs').textContent=score;
-        document.getElementById('dm').textContent=hitMsg;
         document.getElementById('bc').textContent=`Best: ${best}`;
         document.getElementById('deathS').style.display='flex';
         buildAndShowDeathCard(score, hitMsg, isHS);
