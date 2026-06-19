@@ -156,22 +156,18 @@ canvas#gc{
 }
 .cta-secondary:hover{background:rgba(255,255,255,.14);}
 
-.hs-best{
-  background:rgba(168,158,245,.10);
-  border:1px solid rgba(168,158,245,.2);
-  border-radius:16px;
-  padding:22px 32px;
-  margin-top:6px;
+/* Highscore screen — canvas-rendered card, same visual richness as death card */
+.highscoreScreen{ gap:28px; }
+.hs-card-wrap{
+  width:min(86vw, 360px);
+  box-shadow:0 20px 50px rgba(0,0,0,.45), 0 0 0 1px rgba(168,158,245,.12) inset;
+  border-radius:20px;
+  overflow:hidden;
 }
-.hs-label{font-size:13px;color:rgba(255,255,255,.5);letter-spacing:.5px;}
-.hs-value{font-size:54px;font-weight:800;color:#fff;line-height:1.1;margin:4px 0;}
-.hs-sub{font-size:12px;color:rgba(255,255,255,.4);}
-.hs-placeholder{
-  font-size:13px;
-  color:rgba(255,255,255,.35);
-  line-height:1.6;
-  max-width:260px;
-  margin:6px 0 4px;
+.hs-card-wrap img{
+  display:block;
+  width:100%;
+  height:auto;
 }
 
 

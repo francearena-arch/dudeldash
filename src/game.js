@@ -1045,19 +1045,42 @@ function drawObstacleSprite(c,o){
 // ═══════════════════════════════════════════════
 let bgObjs=[];
 function initBg(){
+  // All background objects scroll at the same speed and respawn at a fixed
+  // offset (cycle width) instead of a randomised gap. This makes the
+  // background a predictable, repeating pattern instead of drifting into
+  // inconsistent spacing/gaps over time.
+  const CYCLE = GAME_W * 1.4; // distance after which the pattern repeats
   bgObjs=[
-    {type:'desk',x:GAME_W*0.06,y:0,w:120,h:20,spd:.18},
-    {type:'desk',x:GAME_W*0.66,y:0,w:100,h:20,spd:.18},
-    {type:'plant',x:GAME_W*0.42,y:0,spd:.18},
-    {type:'cabinet',x:GAME_W*0.86,y:0,w:55,h:45,spd:.15},
-    {type:'window',x:GAME_W*0.12,y:0,w:90,h:110,spd:.08},
-    {type:'window',x:GAME_W*0.58,y:0,w:90,h:110,spd:.08},
-    {type:'clock',x:GAME_W*0.90,y:0,spd:.08},
-    {type:'lamp',x:GAME_W*0.28,y:0,spd:.10},
-    {type:'lamp',x:GAME_W*0.78,y:0,spd:.10},
+    {type:'window', x:GAME_W*0.15,           y:0,w:90,h:110,spd:1,cycle:CYCLE},
+    {type:'desk',   x:GAME_W*0.15+CYCLE*0.30, y:0,w:110,h:20,spd:1,cycle:CYCLE},
+    {type:'plant',  x:GAME_W*0.15+CYCLE*0.30+170,y:0,spd:1,cycle:CYCLE},
+    {type:'window', x:GAME_W*0.15+CYCLE*0.62, y:0,w:90,h:110,spd:1,cycle:CYCLE},
+    {type:'cabinet',x:GAME_W*0.15+CYCLE*0.62+170,y:0,w:55,h:45,spd:1,cycle:CYCLE},
+    {type:'clock',  x:GAME_W*0.15+CYCLE*1.0,  y:0,spd:1,cycle:CYCLE},
   ];
 }
 initBg();
+
+// Static ceiling lamps — fixed screen positions, never scroll, so the
+// background composition stays visually consistent every run.
+function drawStaticLamps(){
+  const lampBottomY = GY - 410;
+  const cordTopY = 14;
+  [GAME_W*0.22, GAME_W*0.74].forEach(x=>{
+    ctx.strokeStyle='#8A8470'; ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x,cordTopY);ctx.lineTo(x,lampBottomY-20);ctx.stroke();
+    const lg=ctx.createRadialGradient(x,lampBottomY,4,x,lampBottomY,65);
+    lg.addColorStop(0,'rgba(255,245,200,0.28)');lg.addColorStop(1,'rgba(255,245,200,0)');
+    ctx.fillStyle=lg;ctx.beginPath();ctx.arc(x,lampBottomY,65,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#C8A840';
+    ctx.beginPath();
+    ctx.moveTo(x-14,lampBottomY);ctx.lineTo(x+14,lampBottomY);
+    ctx.lineTo(x+8,lampBottomY-18);ctx.lineTo(x-8,lampBottomY-18);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle='#F8ECC0';
+    ctx.beginPath();ctx.ellipse(x,lampBottomY+2,11,3.5,0,0,Math.PI*2);ctx.fill();
+  });
+}
 
 function drawBg(){
   // ── WALL ──
@@ -1083,28 +1106,15 @@ function drawBg(){
   ctx.fillStyle='#D4D0C4'; ctx.fillRect(0,GY-28,GAME_W,4);
   ctx.fillStyle='#BABBB0'; ctx.fillRect(0,GY-4,GAME_W,4);
 
+  // Static ceiling lamps — fixed, never scroll
+  drawStaticLamps();
+
   // ── SCROLLING BACKGROUND OBJECTS ──
   bgObjs.forEach(o=>{
-    o.x -= o.spd*(spd||4)/4;
-    if(o.x+240<0) o.x = GAME_W+60+Math.random()*100;
+    o.x -= o.spd*(spd||4)*0.3;
+    if(o.x+240<0) o.x += o.cycle;
 
-    if(o.type==='lamp'){
-      const lampBottomY = GY - 255;
-      const cordTopY = 14;
-      ctx.strokeStyle='#8A8470'; ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(o.x,cordTopY);ctx.lineTo(o.x,lampBottomY-20);ctx.stroke();
-      const lg=ctx.createRadialGradient(o.x,lampBottomY,4,o.x,lampBottomY,65);
-      lg.addColorStop(0,'rgba(255,245,200,0.28)');lg.addColorStop(1,'rgba(255,245,200,0)');
-      ctx.fillStyle=lg;ctx.beginPath();ctx.arc(o.x,lampBottomY,65,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#C8A840';
-      ctx.beginPath();
-      ctx.moveTo(o.x-14,lampBottomY);ctx.lineTo(o.x+14,lampBottomY);
-      ctx.lineTo(o.x+8,lampBottomY-18);ctx.lineTo(o.x-8,lampBottomY-18);
-      ctx.closePath();ctx.fill();
-      ctx.fillStyle='#F8ECC0';
-      ctx.beginPath();ctx.ellipse(o.x,lampBottomY+2,11,3.5,0,0,Math.PI*2);ctx.fill();
-
-    } else if(o.type==='window'){
+    if(o.type==='window'){
       const oy = GY*0.20;
       const ww = o.w, wh = o.h;
       // Window surround
@@ -1390,7 +1400,87 @@ function wrapText(ctx, text, maxWidth){
   return allLines;
 }
 
-function generateDeathCard(finalScore, msg, isHighscore){
+// ═══════════════════════════════════════════════
+// HIGHSCORE CARD — same visual richness as the death card
+// (big Dudel, big brand title, big number) but no polaroid frame,
+// and Dudel is shown alive/happy instead of in death pose.
+// ═══════════════════════════════════════════════
+function generateHighscoreCard(bestScore){
+  const CW=540, CH=620;
+  const canvas = document.createElement('canvas');
+  canvas.width = CW; canvas.height = CH;
+  const cc = canvas.getContext('2d');
+
+  const bg = cc.createLinearGradient(0,0,0,CH);
+  bg.addColorStop(0,'#241F52');
+  bg.addColorStop(0.55,'#1A1640');
+  bg.addColorStop(1,'#15112E');
+  cc.fillStyle=bg; cc.fillRect(0,0,CW,CH);
+  cc.fillStyle='rgba(255,255,255,0.04)';
+  for(let x=20;x<CW;x+=36) for(let y=20;y<CH;y+=36){
+    cc.beginPath();cc.arc(x,y,1.4,0,Math.PI*2);cc.fill();
+  }
+
+  const DUDEL_H=130, TITLE_GAP=14, TITLE_H=50, SCORE_GAP=20,
+        LABEL_H=30, SCORE_H=132, SUB_H=32, DIV_GAP=22, DIV_H=1,
+        HINT_GAP=20, HINT_H=40;
+  const totalH = DUDEL_H+TITLE_GAP+TITLE_H+SCORE_GAP+LABEL_H+SCORE_H+SUB_H+DIV_GAP+DIV_H+HINT_GAP+HINT_H;
+  const topPad = Math.max(30, (CH-totalH)/2);
+  let y = topPad;
+
+  const glowCY = y + DUDEL_H + TITLE_GAP + TITLE_H + SCORE_GAP + LABEL_H + SCORE_H*0.55;
+  const glow = cc.createRadialGradient(CW/2, glowCY, 10, CW/2, glowCY, 280);
+  glow.addColorStop(0,'rgba(239,159,39,0.30)');
+  glow.addColorStop(1,'rgba(239,159,39,0)');
+  cc.fillStyle=glow; cc.fillRect(0,0,CW,CH);
+
+  // Dudel — alive, happy pose
+  cc.save();
+  cc.translate(CW/2 - 60, y);
+  cc.scale(2.3, 2.3);
+  drawDudel(cc, 0, 0, frame||0, false, 0, 1);
+  cc.restore();
+  y += DUDEL_H + TITLE_GAP;
+
+  cc.fillStyle='#FFFFFF';
+  cc.font='800 44px system-ui, sans-serif';
+  cc.textAlign='center';
+  cc.letterSpacing='2px';
+  cc.fillText('DUDEL DASH', CW/2, y+44);
+  cc.letterSpacing='0px';
+  y += TITLE_H + SCORE_GAP;
+
+  cc.fillStyle='rgba(255,255,255,0.55)';
+  cc.font='600 22px system-ui, sans-serif';
+  cc.letterSpacing='1px';
+  cc.fillText('DEINE BESTLEISTUNG', CW/2, y+LABEL_H-8);
+  cc.letterSpacing='0px';
+  y += LABEL_H;
+
+  cc.fillStyle='#FFFFFF';
+  cc.font='800 130px system-ui, sans-serif';
+  cc.fillText(bestScore, CW/2, y+122);
+  y += SCORE_H;
+
+  cc.fillStyle='rgba(255,255,255,0.45)';
+  cc.font='500 22px system-ui, sans-serif';
+  cc.fillText('Sekunden im Büroalltag überlebt', CW/2, y+SUB_H-8);
+  y += SUB_H + DIV_GAP;
+
+  cc.strokeStyle='rgba(168,158,245,0.18)';
+  cc.lineWidth=1;
+  cc.beginPath();cc.moveTo(CW*0.22,y);cc.lineTo(CW*0.78,y);cc.stroke();
+  y += DIV_H + HINT_GAP;
+
+  cc.fillStyle='rgba(255,255,255,0.32)';
+  cc.font='500 17px system-ui, sans-serif';
+  const hintLines=['🌐 Online-Bestenliste folgt bald','aktuell wird nur lokal gespeichert'];
+  hintLines.forEach((line,i)=>{ cc.fillText(line, CW/2, y+18+i*22); });
+
+  return canvas;
+}
+
+function generateDeathCard(finalScore, msg, isHighscore, includeFooter){
   // ── INNER CARD: measure content first, then draw centred ──
   const CW=540, CH=760;
   const inner = document.createElement('canvas');
@@ -1426,8 +1516,8 @@ function generateDeathCard(finalScore, msg, isHighscore){
   const SEK_H     = 34;
   const HS_BLOCK  = isHighscore ? 62 : 0;
   const BOX_GAP   = 16;
-  const FOOTER_GAP= 26;
-  const FOOTER_H  = 28;
+  const FOOTER_GAP= includeFooter ? 26 : 8;
+  const FOOTER_H  = includeFooter ? 28 : 0;
 
   const totalH = DUDEL_H + TITLE_GAP + TITLE_H + SCORE_GAP
                + DU_HAST_H + SCORE_H + SEK_H
@@ -1502,13 +1592,17 @@ function generateDeathCard(finalScore, msg, isHighscore){
   cc.font = MSG_FONT;
   cc.textAlign='center';
   const textStartY = y + BOX_H/2 - (lines.length-1)*lineH/2 + 8;
-  lines.forEach((line,i)=>{ cc.fillText(line, CW/2, textStartY + i*lineH, MSG_MAX_W); });
+  lines.forEach((line,i)=>{ cc.fillText(line, CW/2, textStartY + i*lineH); });
   y += BOX_H + FOOTER_GAP;
 
-  // Footer
-  cc.fillStyle='rgba(255,255,255,0.3)';
-  cc.font='500 18px system-ui, sans-serif';
-  cc.fillText('\uD83C\uDFC3 Spiel jetzt selbst \u2014 Dudel Dash', CW/2, y + FOOTER_H - 6);
+  // Footer — only drawn when includeFooter is true (shared/downloaded image),
+  // omitted in the in-app preview since "play it yourself" doesn't make
+  // sense to someone who is already playing.
+  if(includeFooter){
+    cc.fillStyle='rgba(255,255,255,0.3)';
+    cc.font='500 18px system-ui, sans-serif';
+    cc.fillText('\uD83C\uDFC3 Spiel jetzt selbst \u2014 Dudel Dash', CW/2, y + FOOTER_H - 6);
+  }
 
   // ── OUTER POLAROID FRAME baked into the PNG ──
   const PAD_SIDE=28, PAD_TOP=28, PAD_BOTTOM=92;
@@ -1537,10 +1631,17 @@ let lastDeathCardBlob = null;
 
 async function buildAndShowDeathCard(finalScore, msg, isHighscore){
   try{
-    const cardCanvas = generateDeathCard(finalScore, msg, isHighscore);
-    const blob = await new Promise(res => cardCanvas.toBlob(res, 'image/png'));
-    lastDeathCardBlob = blob;
-    const url = URL.createObjectURL(blob);
+    // Preview shown in-app: no "play it yourself" footer (the person is
+    // already playing). Share/download variant keeps the footer since
+    // that version is seen by other people.
+    const previewCanvas = generateDeathCard(finalScore, msg, isHighscore, false);
+    const shareCanvas = generateDeathCard(finalScore, msg, isHighscore, true);
+
+    const previewBlob = await new Promise(res => previewCanvas.toBlob(res, 'image/png'));
+    const shareBlob = await new Promise(res => shareCanvas.toBlob(res, 'image/png'));
+    lastDeathCardBlob = shareBlob;
+
+    const url = URL.createObjectURL(previewBlob);
     const imgEl = document.getElementById('deathCardImg');
     const wrapEl = document.getElementById('polaroidWrap');
     if(imgEl && wrapEl){
@@ -1624,10 +1725,19 @@ function startGame(){
 
 function showHighscores(){
   let b=0;try{b=parseInt(localStorage.getItem('dd_best')||'0');}catch(e){}
-  document.getElementById('hsLocalBest').textContent=b;
   if(window.__dudelFloatBg) window.__dudelFloatBg.stop();
   document.getElementById('startS').style.display='none';
   document.getElementById('highscoreS').style.display='flex';
+  try{
+    const canvas = generateHighscoreCard(b);
+    canvas.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      const imgEl = document.getElementById('hsCardImg');
+      if(imgEl) imgEl.src = url;
+    }, 'image/png');
+  }catch(e){
+    console.warn('Highscore card generation failed', e);
+  }
 }
 
 function showSettings(){
