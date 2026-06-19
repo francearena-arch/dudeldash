@@ -1053,11 +1053,30 @@ function initBg(){
     {type:'window',x:GAME_W*0.12,y:0,w:90,h:110,spd:.08},
     {type:'window',x:GAME_W*0.58,y:0,w:90,h:110,spd:.08},
     {type:'clock',x:GAME_W*0.90,y:0,spd:.08},
-    {type:'lamp',x:GAME_W*0.28,y:0,spd:.10},
-    {type:'lamp',x:GAME_W*0.78,y:0,spd:.10},
   ];
 }
 initBg();
+
+// Static ceiling lamps — fixed screen positions, never scroll, so the
+// background composition stays visually consistent every run.
+function drawStaticLamps(){
+  const lampBottomY = GY - 255;
+  const cordTopY = 14;
+  [GAME_W*0.22, GAME_W*0.74].forEach(x=>{
+    ctx.strokeStyle='#8A8470'; ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x,cordTopY);ctx.lineTo(x,lampBottomY-20);ctx.stroke();
+    const lg=ctx.createRadialGradient(x,lampBottomY,4,x,lampBottomY,65);
+    lg.addColorStop(0,'rgba(255,245,200,0.28)');lg.addColorStop(1,'rgba(255,245,200,0)');
+    ctx.fillStyle=lg;ctx.beginPath();ctx.arc(x,lampBottomY,65,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#C8A840';
+    ctx.beginPath();
+    ctx.moveTo(x-14,lampBottomY);ctx.lineTo(x+14,lampBottomY);
+    ctx.lineTo(x+8,lampBottomY-18);ctx.lineTo(x-8,lampBottomY-18);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle='#F8ECC0';
+    ctx.beginPath();ctx.ellipse(x,lampBottomY+2,11,3.5,0,0,Math.PI*2);ctx.fill();
+  });
+}
 
 function drawBg(){
   // ── WALL ──
@@ -1083,28 +1102,15 @@ function drawBg(){
   ctx.fillStyle='#D4D0C4'; ctx.fillRect(0,GY-28,GAME_W,4);
   ctx.fillStyle='#BABBB0'; ctx.fillRect(0,GY-4,GAME_W,4);
 
+  // Static ceiling lamps — fixed, never scroll
+  drawStaticLamps();
+
   // ── SCROLLING BACKGROUND OBJECTS ──
   bgObjs.forEach(o=>{
     o.x -= o.spd*(spd||4)/4;
     if(o.x+240<0) o.x = GAME_W+60+Math.random()*100;
 
-    if(o.type==='lamp'){
-      const lampBottomY = GY - 255;
-      const cordTopY = 14;
-      ctx.strokeStyle='#8A8470'; ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(o.x,cordTopY);ctx.lineTo(o.x,lampBottomY-20);ctx.stroke();
-      const lg=ctx.createRadialGradient(o.x,lampBottomY,4,o.x,lampBottomY,65);
-      lg.addColorStop(0,'rgba(255,245,200,0.28)');lg.addColorStop(1,'rgba(255,245,200,0)');
-      ctx.fillStyle=lg;ctx.beginPath();ctx.arc(o.x,lampBottomY,65,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#C8A840';
-      ctx.beginPath();
-      ctx.moveTo(o.x-14,lampBottomY);ctx.lineTo(o.x+14,lampBottomY);
-      ctx.lineTo(o.x+8,lampBottomY-18);ctx.lineTo(o.x-8,lampBottomY-18);
-      ctx.closePath();ctx.fill();
-      ctx.fillStyle='#F8ECC0';
-      ctx.beginPath();ctx.ellipse(o.x,lampBottomY+2,11,3.5,0,0,Math.PI*2);ctx.fill();
-
-    } else if(o.type==='window'){
+    if(o.type==='window'){
       const oy = GY*0.20;
       const ww = o.w, wh = o.h;
       // Window surround
@@ -1390,7 +1396,7 @@ function wrapText(ctx, text, maxWidth){
   return allLines;
 }
 
-function generateDeathCard(finalScore, msg, isHighscore){
+function generateDeathCard(finalScore, msg, isHighscore, includeFooter){
   // ── INNER CARD: measure content first, then draw centred ──
   const CW=540, CH=760;
   const inner = document.createElement('canvas');
@@ -1426,8 +1432,8 @@ function generateDeathCard(finalScore, msg, isHighscore){
   const SEK_H     = 34;
   const HS_BLOCK  = isHighscore ? 62 : 0;
   const BOX_GAP   = 16;
-  const FOOTER_GAP= 26;
-  const FOOTER_H  = 28;
+  const FOOTER_GAP= includeFooter ? 26 : 8;
+  const FOOTER_H  = includeFooter ? 28 : 0;
 
   const totalH = DUDEL_H + TITLE_GAP + TITLE_H + SCORE_GAP
                + DU_HAST_H + SCORE_H + SEK_H
@@ -1502,13 +1508,17 @@ function generateDeathCard(finalScore, msg, isHighscore){
   cc.font = MSG_FONT;
   cc.textAlign='center';
   const textStartY = y + BOX_H/2 - (lines.length-1)*lineH/2 + 8;
-  lines.forEach((line,i)=>{ cc.fillText(line, CW/2, textStartY + i*lineH, MSG_MAX_W); });
+  lines.forEach((line,i)=>{ cc.fillText(line, CW/2, textStartY + i*lineH); });
   y += BOX_H + FOOTER_GAP;
 
-  // Footer
-  cc.fillStyle='rgba(255,255,255,0.3)';
-  cc.font='500 18px system-ui, sans-serif';
-  cc.fillText('\uD83C\uDFC3 Spiel jetzt selbst \u2014 Dudel Dash', CW/2, y + FOOTER_H - 6);
+  // Footer — only drawn when includeFooter is true (shared/downloaded image),
+  // omitted in the in-app preview since "play it yourself" doesn't make
+  // sense to someone who is already playing.
+  if(includeFooter){
+    cc.fillStyle='rgba(255,255,255,0.3)';
+    cc.font='500 18px system-ui, sans-serif';
+    cc.fillText('\uD83C\uDFC3 Spiel jetzt selbst \u2014 Dudel Dash', CW/2, y + FOOTER_H - 6);
+  }
 
   // ── OUTER POLAROID FRAME baked into the PNG ──
   const PAD_SIDE=28, PAD_TOP=28, PAD_BOTTOM=92;
@@ -1537,10 +1547,17 @@ let lastDeathCardBlob = null;
 
 async function buildAndShowDeathCard(finalScore, msg, isHighscore){
   try{
-    const cardCanvas = generateDeathCard(finalScore, msg, isHighscore);
-    const blob = await new Promise(res => cardCanvas.toBlob(res, 'image/png'));
-    lastDeathCardBlob = blob;
-    const url = URL.createObjectURL(blob);
+    // Preview shown in-app: no "play it yourself" footer (the person is
+    // already playing). Share/download variant keeps the footer since
+    // that version is seen by other people.
+    const previewCanvas = generateDeathCard(finalScore, msg, isHighscore, false);
+    const shareCanvas = generateDeathCard(finalScore, msg, isHighscore, true);
+
+    const previewBlob = await new Promise(res => previewCanvas.toBlob(res, 'image/png'));
+    const shareBlob = await new Promise(res => shareCanvas.toBlob(res, 'image/png'));
+    lastDeathCardBlob = shareBlob;
+
+    const url = URL.createObjectURL(previewBlob);
     const imgEl = document.getElementById('deathCardImg');
     const wrapEl = document.getElementById('polaroidWrap');
     if(imgEl && wrapEl){
