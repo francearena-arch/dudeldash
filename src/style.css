@@ -156,69 +156,22 @@ canvas#gc{
 }
 .cta-secondary:hover{background:rgba(255,255,255,.14);}
 
-/* Highscore screen — card-style, echoing the death card's visual language */
-.highscoreScreen{ gap:24px; }
-.hs-card{
-  position:relative;
-  width:min(86vw, 340px);
-  background:linear-gradient(180deg,#241F52 0%,#1A1640 60%,#15112E 100%);
-  border-radius:24px;
-  padding:38px 28px 32px;
-  box-shadow:0 20px 50px rgba(0,0,0,.4), 0 0 0 1px rgba(168,158,245,.15) inset;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  overflow:hidden;
+.hs-best{
+  background:rgba(168,158,245,.10);
+  border:1px solid rgba(168,158,245,.2);
+  border-radius:16px;
+  padding:22px 32px;
+  margin-top:6px;
 }
-.hs-glow{
-  position:absolute;
-  top:30%;left:50%;
-  width:280px;height:280px;
-  transform:translate(-50%,-50%);
-  background:radial-gradient(circle,rgba(168,158,245,.35) 0%,rgba(168,158,245,0) 70%);
-  pointer-events:none;
-}
-.hs-trophy{
-  font-size:52px;
-  margin-bottom:6px;
-  filter:drop-shadow(0 4px 14px rgba(239,159,39,.4));
-  position:relative;
-}
-.hs-title{
-  font-size:12px;
-  font-weight:700;
-  letter-spacing:1.5px;
-  color:rgba(255,255,255,.5);
-  position:relative;
-}
-.hs-value{
-  font-size:72px;
-  font-weight:800;
-  color:#fff;
-  line-height:1.05;
-  margin:6px 0 2px;
-  position:relative;
-  text-shadow:0 0 30px rgba(168,158,245,.5);
-}
-.hs-sub{
-  font-size:13px;
-  color:rgba(255,255,255,.45);
-  position:relative;
-  margin-bottom:18px;
-}
-.hs-divider{
-  width:60%;
-  height:1px;
-  background:rgba(168,158,245,.18);
-  margin-bottom:18px;
-  position:relative;
-}
+.hs-label{font-size:13px;color:rgba(255,255,255,.5);letter-spacing:.5px;}
+.hs-value{font-size:54px;font-weight:800;color:#fff;line-height:1.1;margin:4px 0;}
+.hs-sub{font-size:12px;color:rgba(255,255,255,.4);}
 .hs-placeholder{
-  font-size:12.5px;
+  font-size:13px;
   color:rgba(255,255,255,.35);
   line-height:1.6;
-  text-align:center;
-  position:relative;
+  max-width:260px;
+  margin:6px 0 4px;
 }
 
 
