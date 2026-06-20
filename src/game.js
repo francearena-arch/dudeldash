@@ -254,8 +254,20 @@ function applyShake(){
 try{ best=parseInt(localStorage.getItem('dd_best')||'0'); }catch(e){}
 
 function nextGap(){
-  const base = 130 - Math.floor(frame/300)*7;
-  const minGap = Math.max(52, 70 - Math.floor(frame/600)*5);
+  // Gaps are calculated in REACTION TIME (frames), not raw pixels, then
+  // converted to pixels using the current speed. This keeps the actual
+  // time the player has to react roughly constant as the game speeds up —
+  // previously the gap was a fixed/slowly-shrinking pixel distance while
+  // speed kept climbing, so reaction time collapsed from ~290ms early on
+  // to under 80ms after a minute, making the game effectively unplayable
+  // past a certain point regardless of skill.
+  const curSpd = spd || 4;
+  const minReactionFrames = Math.max(18, 26 - Math.floor(frame/900)); // ~300ms → ~300ms floor at high speed too, eases only slightly over a long run
+  const minGap = minReactionFrames * curSpd;
+
+  const baseReactionFrames = 34 - Math.floor(frame/500)*1.2; // slowly tightens the *upper* variety, not the safety floor
+  const base = Math.max(minReactionFrames+6, baseReactionFrames) * curSpd;
+
   const r = Math.random();
   let gap;
   if(r < 0.25)      gap = minGap + Math.random()*25;
@@ -1106,9 +1118,6 @@ function drawBg(){
   ctx.fillStyle='#D4D0C4'; ctx.fillRect(0,GY-28,GAME_W,4);
   ctx.fillStyle='#BABBB0'; ctx.fillRect(0,GY-4,GAME_W,4);
 
-  // Static ceiling lamps — fixed, never scroll
-  drawStaticLamps();
-
   // ── SCROLLING BACKGROUND OBJECTS ──
   bgObjs.forEach(o=>{
     o.x -= o.spd*(spd||4)*0.3;
@@ -1209,6 +1218,11 @@ function drawBg(){
       ctx.fillStyle='#2A2018';ctx.beginPath();ctx.arc(o.x,oy,2,0,Math.PI*2);ctx.fill();
     }
   });
+
+  // Static ceiling lamps — fixed, never scroll. Drawn AFTER the scrolling
+  // background objects (windows etc.) so the cord/shade always render in
+  // front of them instead of disappearing behind a window frame.
+  drawStaticLamps();
 
   // ── FLOOR ──
   ctx.fillStyle='#9A9490'; ctx.fillRect(0,GY,GAME_W,GAME_H-GY);
